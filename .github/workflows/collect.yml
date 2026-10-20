@@ -1,0 +1,46 @@
+
+name: Collect real Wikimedia biographies
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Collect 3000 biographies
+        env:
+          WIKIMEDIA_CONTACT: ${{ secrets.WIKIMEDIA_CONTACT }}
+        run: |
+          cd history-life-game-v7-collector
+          python build_people_v7.py --limit 3000 --output people.json
+
+      - name: Validate collected data
+        if: success()
+        run: |
+          cd history-life-game-v7-collector
+          python validate_people.py
+
+      - name: Upload collected data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: history-life-data
+          path: |
+            history-life-game-v7-collector/people.json
+            history-life-game-v7-collector/*.json
+            history-life-game-v7-collector/*.txt
+          if-no-files-found: warn
